@@ -123,7 +123,7 @@ function extensionForMime(mimeType) {
   return known[mimeType] || 'bin';
 }
 
-async function saveUploadedMedia(file) {
+export function validateUploadedMedia(file) {
   if (!file || typeof file.arrayBuffer !== 'function' || !file.size) return null;
   if (!String(file.type).startsWith('image/') && !String(file.type).startsWith('video/')) {
     const error = new Error('El dashboard admite imágenes o videos en esta etapa.');
@@ -135,6 +135,63 @@ async function saveUploadedMedia(file) {
     error.statusCode = 413;
     throw error;
   }
+  return file;
+}
+
+export function requireRegisteredChannel(channelJid, channel) {
+  if (!channel || channel.channel_jid !== channelJid) {
+    const error = new Error('Selecciona un canal registrado.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return channel;
+}
+
+export function validatePublicationDraft({ channelJid, channel, textContent, file, scheduledRaw, now = () => new Date() }) {
+  requireRegisteredChannel(channelJid, channel);
+  const mediaFile = validateUploadedMedia(file);
+  if (!textContent && !mediaFile) {
+    const error = new Error('Agrega texto, una imagen o un video.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const scheduledAt = scheduledRaw ? new Date(scheduledRaw) : now();
+  if (Number.isNaN(scheduledAt.getTime())) {
+    const error = new Error('La fecha de publicación no es válida.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return { mediaFile, scheduledAt };
+}
+
+export function requireControlChat(control) {
+  if (!control) {
+    const error = new Error('Activa primero un grupo de control con !canalbot on.');
+    error.statusCode = 409;
+    throw error;
+  }
+  return control;
+}
+
+export function validateCampaignSchedule(name, scheduleTime, timezone = 'America/Mexico_City') {
+  if (!name || !/^([01]\d|2[0-3]):[0-5]\d$/.test(scheduleTime)) {
+    const error = new Error('Completa el nombre y una hora válida para la campaña.');
+    error.statusCode = 400;
+    throw error;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format();
+  } catch {
+    const error = new Error('Usa una zona horaria IANA válida, por ejemplo America/Mexico_City.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return { name, scheduleTime, timezone };
+}
+
+async function saveUploadedMedia(file) {
+  file = validateUploadedMedia(file);
+  if (!file) return null;
 
   const directory = path.join(config.mediaCacheDir, 'dashboard');
   await fs.mkdir(directory, { recursive: true });
@@ -280,40 +337,37 @@ async function handlePublication(req, res) {
   const scheduledRaw = String(form.get('scheduledAt') || '').trim();
   const file = form.get('file');
   const channel = await findChannel(channelJid);
-  if (!channel || channel.channel_jid !== channelJid) {
-    const error = new Error('Selecciona un canal registrado.');
-    error.statusCode = 400;
-    throw error;
-  }
-  if (!textContent && (!file || !file.size)) {
-    const error = new Error('Agrega texto, una imagen o un video.');
-    error.statusCode = 400;
-    throw error;
-  }
+  const { scheduledAt } = validatePublicationDraft({
+    channelJid,
+    channel,
+    textContent,
+    file,
+    scheduledRaw
+  });
 
+  const control = await getActiveControlChat();
   const media = await saveUploadedMedia(file);
   const contentType = media
     ? (media.mimeType.startsWith('video/') ? 'video' : 'image')
     : 'text';
-  const scheduledAt = scheduledRaw ? new Date(scheduledRaw) : new Date();
-  if (Number.isNaN(scheduledAt.getTime())) {
-    const error = new Error('La fecha de publicación no es válida.');
-    error.statusCode = 400;
+  const sourceMessageId = `dashboard:${crypto.randomUUID()}`;
+  let queueId;
+  try {
+    queueId = await enqueueChannelPost({
+      channelJid,
+      sourceChatJid: control?.chat_jid || 'dashboard@local',
+      sourceMessageId,
+      creatorJid: null,
+      contentType,
+      textContent,
+      mediaPath: media?.path || null,
+      mimeType: media?.mimeType || null,
+      scheduledAt
+    });
+  } catch (error) {
+    if (media?.path) await fs.rm(media.path, { force: true }).catch(() => {});
     throw error;
   }
-  const control = await getActiveControlChat();
-  const sourceMessageId = `dashboard:${crypto.randomUUID()}`;
-  const queueId = await enqueueChannelPost({
-    channelJid,
-    sourceChatJid: control?.chat_jid || 'dashboard@local',
-    sourceMessageId,
-    creatorJid: null,
-    contentType,
-    textContent,
-    mediaPath: media?.path || null,
-    mimeType: media?.mimeType || null,
-    scheduledAt
-  });
   await logAction({
     actionKey: 'publication_queued_from_dashboard',
     mode: 'executed',
@@ -333,22 +387,10 @@ async function handleCreateCampaign(req, res) {
   const scheduleTime = String(input.scheduleTime || '').trim();
   const timezone = String(input.timezone || 'America/Mexico_City').trim();
   const control = await getActiveControlChat();
-  if (!control) {
-    const error = new Error('Activa primero un grupo de control con !canalbot on.');
-    error.statusCode = 409;
-    throw error;
-  }
-  if (!name || !/^([01]\d|2[0-3]):[0-5]\d$/.test(scheduleTime)) {
-    const error = new Error('Completa el nombre y una hora válida para la campaña.');
-    error.statusCode = 400;
-    throw error;
-  }
+  requireControlChat(control);
+  validateCampaignSchedule(name, scheduleTime, timezone);
   const channel = await findChannel(channelJid);
-  if (!channel || channel.channel_jid !== channelJid) {
-    const error = new Error('Selecciona un canal registrado.');
-    error.statusCode = 400;
-    throw error;
-  }
+  requireRegisteredChannel(channelJid, channel);
   const campaign = await createCampaign({
     chatJid: control.chat_jid,
     channelJid,
@@ -419,8 +461,8 @@ async function route(req, res) {
 }
 
 export async function startDashboardServer() {
-  if (!isLoopback(config.dashboard.host) && !config.dashboard.accessToken) {
-    throw new Error('CANALBOT_DASHBOARD_TOKEN es obligatorio cuando el dashboard escucha fuera de localhost.');
+  if (!isLoopback(config.dashboard.host)) {
+    throw new Error('La API de CanalBot sólo puede escuchar en localhost. Usa un túnel o proxy seguro con autenticación y HTTPS.');
   }
 
   const server = http.createServer((req, res) => {

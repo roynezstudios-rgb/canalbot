@@ -4,8 +4,7 @@ function number(value) {
   return Number(value || 0);
 }
 
-export async function dashboardSnapshot() {
-  const pool = getPool();
+export async function dashboardSnapshot(pool = getPool()) {
   const [
     [sessions],
     [summaryRows],
@@ -116,8 +115,8 @@ export async function dashboardSnapshot() {
   };
 }
 
-export async function confirmChannelAdmin(channelJid) {
-  await getPool().execute(
+export async function confirmChannelAdmin(channelJid, pool = getPool()) {
+  await pool.execute(
     `UPDATE wa_channels
         SET admin_confirmed_at=UTC_TIMESTAMP(), updated_at=CURRENT_TIMESTAMP
       WHERE channel_jid=:channelJid`,
@@ -125,8 +124,8 @@ export async function confirmChannelAdmin(channelJid) {
   );
 }
 
-export async function getCampaignById(id) {
-  const [rows] = await getPool().execute(
+export async function getCampaignById(id, pool = getPool()) {
+  const [rows] = await pool.execute(
     `SELECT id, chat_jid, channel_jid, name, status FROM wa_campaigns WHERE id=:id LIMIT 1`,
     { id }
   );
