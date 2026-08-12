@@ -151,7 +151,7 @@ async function start() {
   const sock = makeWASocket({
     auth: state,
     version: selectedVersion,
-    browser: Browsers.ubuntu('WhatsApp Guardian'),
+    browser: Browsers.ubuntu('CanalBot'),
     logger: pino({ level: 'silent' }),
     markOnlineOnConnect: false,
     syncFullHistory: false,

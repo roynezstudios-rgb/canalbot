@@ -13,7 +13,7 @@ export async function sendOutboundMessage(sock, chatJid, content, options = {}) 
   const waitMs = Math.max(0, nextSendAt - now);
   if (waitMs) await sleep(waitMs);
 
-  const minDelay = Math.max(0, config.guardian.outboundMinDelayMs);
+  const minDelay = Math.max(0, config.canalbot.outboundMinDelayMs);
   nextSendAtByChat.set(chatJid, Date.now() + minDelay);
 
   logger.debug({ chatJid, priority: options.priority || 'normal' }, 'sending outbound WhatsApp message');

@@ -6,4 +6,3 @@ export * from './db/publications.js';
 export * from './db/publishSafety.js';
 export * from './db/campaigns.js';
 export * from './db/creatorMentions.js';
-export * from './db/guardian.js';

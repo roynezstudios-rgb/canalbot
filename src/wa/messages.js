@@ -4,10 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
 import {
-  addStrike,
   addPublicationCaptureItem,
   activateControlChat,
-  createReport,
   deactivateControlChat,
   enqueueChannelPost,
   addStickerAsset,
@@ -26,7 +24,6 @@ import {
   saveStickerStockSettings,
   getStickerStockSettings,
   setStickerStockEnabled,
-  getRule,
   insertMessageEvent,
   listChannels,
   logAction,
@@ -42,17 +39,12 @@ import {
   startPublicationCapture,
   startStickerLearning,
   upsertChannel,
-  upsertGroup,
   upsertUser
 } from '../db.js';
 import { logger } from '../logger.js';
 import { reply } from '../core/outboundQueue.js';
 import { senderIsGroupAdmin } from '../core/permissions.js';
 import { canalBotAccessForChat } from '../core/messageUtils.js';
-import { handleGuardianGroupMessage } from '../guardianbot/index.js';
-import { handleGuardianCallMessage } from '../guardianbot/moderation/groupCalls.js';
-import { handlePrivateAutoReply } from './privateAutoReply.js';
-import { evaluateLinkGuard } from '../rules/linkGuard.js';
 import { stickerCommand, stickerTestSchedule, parseBlockSchedule, parseIndividualSchedule } from '../stickers/policy.js';
 import { parsePublicationInterval, publicationCommand } from '../publications/policy.js';
 import { collectCampaignIfCapturing, handleCampaignCommand } from '../campaigns/handler.js';
@@ -231,83 +223,6 @@ function extensionForMime(mimeType = '') {
   if (mimeType.includes('mp4')) return 'mp4';
   if (mimeType.includes('pdf')) return 'pdf';
   return 'bin';
-}
-
-async function maybeCacheGroup(sock, chatJid) {
-  if (!isJidGroup(chatJid)) return;
-  try {
-    const metadata = await sock.groupMetadata(chatJid);
-    await upsertGroup({ jid: chatJid, subject: metadata.subject });
-  } catch (error) {
-    logger.warn({ error, chatJid }, 'could not fetch group metadata');
-  }
-}
-
-async function handleLinkGuard({ sock, msg, chatJid, senderJid, text }) {
-  const rule = await getRule('link_guard');
-  if (!rule) return { matched: false, reason: 'rule-disabled' };
-
-  const senderIsAdmin = await senderIsGroupAdmin(sock, chatJid, senderJid);
-  const result = evaluateLinkGuard({
-    text,
-    senderIsAdmin,
-    whitelistDomains: rule.config?.whitelist_domains || []
-  });
-  if (!result.matched || result.allowed) return result;
-
-  const mode = config.dryRun ? 'dry_run' : 'executed';
-  const reportId = await createReport({
-    groupJid: chatJid,
-    reportedUserJid: senderJid,
-    reporterJid: 'whatsapp-guardian',
-    reason: result.reason,
-    weight: rule.config?.strike_points || 1,
-    status: 'open'
-  });
-  const strikeId = await addStrike({
-    groupJid: chatJid,
-    userJid: senderJid,
-    ruleKey: rule.ruleKey,
-    points: rule.config?.strike_points || 1,
-    reason: result.reason
-  });
-
-  await logAction({
-    actionKey: 'link_guard_detected',
-    mode,
-    groupJid: chatJid,
-    targetUserJid: senderJid,
-    messageId: msg.key.id,
-    reason: result.reason,
-    details: {
-      ruleAction: rule.action,
-      reportId,
-      strikeId,
-      recommendedAction: result.recommendedAction,
-      textPreview: text.slice(0, 160)
-    }
-  });
-
-  logger.info({
-    chatJid,
-    senderJid,
-    messageId: msg.key.id,
-    dryRun: config.dryRun
-  }, 'unauthorized link detected');
-
-  if (!config.dryRun) {
-    await logAction({
-      actionKey: 'link_guard_action_blocked',
-      mode: 'blocked',
-      groupJid: chatJid,
-      targetUserJid: senderJid,
-      messageId: msg.key.id,
-      reason: 'delete_not_enabled_yet',
-      details: { requestedAction: 'delete' }
-    });
-  }
-
-  return result;
 }
 
 async function downloadQueueMedia({ sock, msg, info }) {
@@ -1002,10 +917,8 @@ export async function handleMessagesUpsert({ sock, event }) {
     const senderJid = msg.key.participant || (msg.key.fromMe ? sock.user?.id : msg.key.remoteJid);
     const text = messageText(msg.message);
     const type = messageType(msg.message);
-    const linkResult = evaluateLinkGuard({ text });
 
     await upsertUser({ jid: senderJid, displayName: msg.pushName });
-    await maybeCacheGroup(sock, chatJid);
     const inserted = await insertMessageEvent({
       messageId: msg.key.id,
       chatJid,
@@ -1013,7 +926,7 @@ export async function handleMessagesUpsert({ sock, event }) {
       messageType: type,
       text,
       hasMedia: hasMedia(msg.message),
-      hasLink: linkResult.matched,
+      hasLink: false,
       raw: {
         key: msg.key,
         messageTimestamp: msg.messageTimestamp,
@@ -1021,10 +934,6 @@ export async function handleMessagesUpsert({ sock, event }) {
       }
     });
     if (!inserted) continue;
-
-    if (!isJidGroup(chatJid) && !isJidNewsletter(chatJid)) {
-      if (await handlePrivateAutoReply({ sock, msg, chatJid, senderJid, text })) continue;
-    }
 
     const handledCommand = await handleQueueCommand({ sock, msg, chatJid, senderJid, text });
     if (handledCommand) continue;
@@ -1034,14 +943,6 @@ export async function handleMessagesUpsert({ sock, event }) {
     if (await collectPublicationIfCapturing({ sock, msg, chatJid, senderJid, text })) continue;
 
     if (await collectCampaignIfCapturing({ sock, msg, chatJid, senderJid, text, isSticker: isStickerMessage, mediaInfo, downloadMedia: downloadQueueMedia })) continue;
-
-    if (isJidGroup(chatJid)) {
-      if (await handleGuardianCallMessage({ sock, msg })) continue;
-      const handledGuardian = await handleGuardianGroupMessage({ sock, msg, chatJid, senderJid, text });
-      if (handledGuardian) continue;
-      await handleLinkGuard({ sock, msg, chatJid, senderJid, text });
-      continue;
-    }
 
     if (isJidNewsletter(chatJid)) {
       await logAction({

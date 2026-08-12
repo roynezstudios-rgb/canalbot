@@ -1,136 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-edition="${1:-}"
-skip_migrate="${SKIP_MIGRATE:-false}"
-skip_tests="${SKIP_TESTS:-false}"
-
-usage() {
-  cat <<'USAGE'
-Uso:
-  npm run setup -- canalbot
-  npm run setup -- guardianbot
-  npm run setup -- suite
-
-Variables opcionales:
-  SKIP_MIGRATE=true npm run setup -- suite
-  SKIP_TESTS=true npm run setup -- suite
-USAGE
-}
-
-if [[ -z "$edition" ]]; then
-  echo "Elige edicion:"
-  echo "  1) canalbot"
-  echo "  2) guardianbot"
-  echo "  3) suite"
-  read -r -p "Opcion [1-3]: " option
-  case "$option" in
-    1) edition="canalbot" ;;
-    2) edition="guardianbot" ;;
-    3) edition="suite" ;;
-    *) echo "Opcion invalida"; usage; exit 1 ;;
-  esac
-fi
-
-case "$edition" in
-  canalbot|guardianbot|suite) ;;
-  *) echo "Edicion invalida: $edition"; usage; exit 1 ;;
-esac
-
-if ! command -v node >/dev/null 2>&1; then
-  echo "Falta Node.js. Instala Node.js 20 o superior."
-  exit 1
-fi
-
-node_major="$(node -p "Number(process.versions.node.split('.')[0])")"
-if [[ "$node_major" -lt 20 ]]; then
-  echo "Node.js debe ser 20 o superior. Version actual: $(node -v)"
-  exit 1
-fi
-
-if ! command -v npm >/dev/null 2>&1; then
-  echo "Falta npm."
+if ! command -v node >/dev/null 2>&1 || [[ "$(node -p "Number(process.versions.node.split('.')[0])")" -lt 20 ]]; then
+  echo "CanalBot requiere Node.js 20 o superior."
   exit 1
 fi
 
 mkdir -p auth/main data/media-cache logs
-
-if [[ ! -f .env ]]; then
-  cp .env.example .env
-  echo "Creado .env desde .env.example"
-fi
-
-set_env() {
-  local key="$1"
-  local value="$2"
-  if grep -q "^${key}=" .env; then
-    sed -i "s|^${key}=.*|${key}=${value}|" .env
-  else
-    printf '%s=%s\n' "$key" "$value" >> .env
-  fi
-}
-
-set_env WA_ENABLE_CONNECT false
-set_env WA_AUTH_DIR auth/main
-set_env WA_SESSION_NAME main
-set_env WA_QR_IMAGE_PATH data/latest-qr.png
-set_env WA_DRY_RUN true
-
-case "$edition" in
-  canalbot)
-    set_env CANALBOT_ENABLE true
-    set_env GUARDIAN_ENABLE false
-    ;;
-  guardianbot)
-    set_env CANALBOT_ENABLE false
-    set_env GUARDIAN_ENABLE true
-    set_env GUARDIAN_DRY_RUN true
-    set_env GUARDIAN_OBSERVE_ONLY true
-    set_env GUARDIAN_DESTRUCTIVE_ACTIONS false
-    ;;
-  suite)
-    set_env CANALBOT_ENABLE true
-    set_env GUARDIAN_ENABLE true
-    set_env GUARDIAN_DRY_RUN true
-    set_env GUARDIAN_OBSERVE_ONLY true
-    set_env GUARDIAN_DESTRUCTIVE_ACTIONS false
-    ;;
-esac
-
+[[ -f .env ]] || cp .env.example .env
 echo "Instalando dependencias..."
 npm install
 
-if [[ "$skip_migrate" != "true" ]]; then
-  echo "Aplicando migraciones..."
-  npm run migrate
-fi
+if [[ "${SKIP_MIGRATE:-false}" != "true" ]]; then npm run migrate; fi
+if [[ "${SKIP_TESTS:-false}" != "true" ]]; then npm test; fi
 
-if [[ "$skip_tests" != "true" ]]; then
-  echo "Ejecutando pruebas..."
-  npm test
-fi
+cat <<'EOF'
 
-cat <<EOF
+CanalBot quedó instalado.
 
-Instalacion base terminada.
-Edicion configurada: ${edition}
+1. Configura MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER y MYSQL_PASSWORD en .env.
+2. Vincula WhatsApp con: npm run pair:qr
+   O usa código: npm run pair:code -- --phone 5215551234567
+3. Tras vincular, cambia WA_ENABLE_CONNECT=true en .env.
+4. Inicia CanalBot: npm start
 
-Antes de conectar WhatsApp revisa .env:
-  MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
-  WA_PAIRING_PHONE si quieres codigo de vinculacion
-
-Para vincular por QR:
-  npm run pair:qr
-
-Para vincular por codigo:
-  npm run pair:code -- --phone 5215551234567
-
-Despues de vincular:
-  1. Cambia WA_ENABLE_CONNECT=true en .env.
-  2. Ejecuta: npm start
-
-Para dejarlo como servicio Linux lee docs/INSTALACION.md.
 EOF

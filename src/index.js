@@ -8,7 +8,7 @@ async function main() {
     dryRun: config.dryRun,
     enableConnect: config.enableConnect,
     sessionName: config.sessionName
-  }, 'whatsapp guardian starting');
+  }, 'CanalBot starting');
 
   if (!config.enableConnect) {
     await logAction({
@@ -24,11 +24,11 @@ async function main() {
 
   const controller = await startWhatsApp();
   const keepAlive = setInterval(() => {
-    logger.debug('whatsapp guardian keep-alive');
+    logger.debug('CanalBot keep-alive');
   }, 60_000);
 
   const shutdown = async signal => {
-    logger.info({ signal }, 'shutting down whatsapp guardian');
+    logger.info({ signal }, 'shutting down CanalBot');
     clearInterval(keepAlive);
     await controller.stop();
     await closePool();
@@ -40,7 +40,7 @@ async function main() {
 }
 
 main().catch(async error => {
-  logger.error({ error }, 'whatsapp guardian failed');
+  logger.error({ error }, 'CanalBot failed');
   await closePool().catch(() => {});
   process.exit(1);
 });
