@@ -19,6 +19,7 @@ import { processStickerStockJobs } from '../stickers/stockJobs.js';
 import { recoverInterruptedPublishes } from '../db/publishSafety.js';
 import { processDueCampaigns } from '../campaigns/jobs.js';
 import { processDueCreatorMentions } from '../creatorMention/jobs.js';
+import { setRuntimeSocket, updateRuntimeStatus } from '../runtime/status.js';
 
 function disconnectStatusCode(lastDisconnect) {
   return lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.statusCode;
@@ -39,6 +40,7 @@ async function saveQrImage(qr) {
 }
 
 export async function startWhatsApp() {
+  updateRuntimeStatus({ status: 'connecting', qrAvailable: false, lastError: null });
   const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
   const { version, isLatest } = await fetchLatestBaileysVersion();
   const waLogger = pino({ level: config.logLevel === 'debug' ? 'debug' : 'silent' });
@@ -67,6 +69,7 @@ export async function startWhatsApp() {
     syncFullHistory: false,
     printQRInTerminal: false
   });
+  setRuntimeSocket(sock);
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -96,30 +99,58 @@ export async function startWhatsApp() {
       logger.info('QR recibido. Escanea este codigo con WhatsApp > Dispositivos vinculados.');
       qrcode.generate(qr, { small: true });
       const qrImagePath = await saveQrImage(qr);
-      await logAction({
-        actionKey: 'qr_generated',
-        mode: 'dry_run',
-        reason: 'waiting_for_whatsapp_pairing',
-        details: { sessionName: config.sessionName, qrImagePath }
+      updateRuntimeStatus({
+        status: 'qr_pending',
+        qrAvailable: true,
+        qrUpdatedAt: new Date().toISOString(),
+        phoneJid: null,
+        lastError: null
       });
+      try {
+        await logAction({
+          actionKey: 'qr_generated',
+          mode: 'dry_run',
+          reason: 'waiting_for_whatsapp_pairing',
+          details: { sessionName: config.sessionName, qrImagePath }
+        });
+      } catch (error) {
+        logger.warn({ error }, 'database unavailable while recording QR generation');
+      }
       logger.info({ qrImagePath }, 'imagen QR de vinculacion guardada');
     }
 
     if (connection === 'open') {
       const phoneJid = sock.user?.id || null;
-      await upsertSession({ sessionName: config.sessionName, status: 'connected', phoneJid });
-      await logAction({
-        actionKey: 'session_connected',
-        mode: config.dryRun ? 'dry_run' : 'executed',
-        reason: 'baileys_connection_open',
-        details: { sessionName: config.sessionName, phoneJid }
+      updateRuntimeStatus({
+        status: 'connected',
+        qrAvailable: false,
+        phoneJid,
+        lastError: null
       });
-      logger.info({ phoneJid }, 'whatsapp session connected');
-      const recovered = await recoverInterruptedPublishes();
-      if (recovered.channelQueue || recovered.stickerStock || recovered.stickerTests) {
-        logger.warn({ recovered }, 'interrupted publication jobs moved to review-required state');
+      try {
+        await upsertSession({ sessionName: config.sessionName, status: 'connected', phoneJid });
+        await logAction({
+          actionKey: 'session_connected',
+          mode: config.dryRun ? 'dry_run' : 'executed',
+          reason: 'baileys_connection_open',
+          details: { sessionName: config.sessionName, phoneJid }
+        });
+      } catch (error) {
+        logger.warn({ error }, 'database unavailable while recording WhatsApp connection');
       }
-      if (config.canalbot.enabled && config.canalbot.publishEnabled && !queueTimer) {
+      logger.info({ phoneJid }, 'whatsapp session connected');
+      const automationEnabled = config.canalbot.enabled && config.canalbot.publishEnabled && !config.dryRun;
+      if (automationEnabled) {
+        try {
+          const recovered = await recoverInterruptedPublishes();
+          if (recovered.channelQueue || recovered.stickerStock || recovered.stickerTests) {
+            logger.warn({ recovered }, 'interrupted publication jobs moved to review-required state');
+          }
+        } catch (error) {
+          logger.error({ error }, 'failed recovering interrupted publication jobs');
+        }
+      }
+      if (automationEnabled && !queueTimer) {
         queueTimer = setInterval(() => {
           processDueChannelQueue(sock).catch(error => {
             logger.error({ error }, 'failed processing WhatsApp channel queue');
@@ -129,7 +160,7 @@ export async function startWhatsApp() {
           logger.error({ error }, 'failed processing WhatsApp channel queue');
         });
       }
-      if (!stickerTestTimer) {
+      if (automationEnabled && !stickerTestTimer) {
         stickerTestTimer = setInterval(() => {
           processDueStickerTestJobs(sock).catch(error => {
             logger.error({ error }, 'failed processing sticker test jobs');
@@ -139,32 +170,43 @@ export async function startWhatsApp() {
           logger.error({ error }, 'failed processing sticker test jobs');
         });
       }
-      if (!stickerStockTimer) {
+      if (automationEnabled && !stickerStockTimer) {
         stickerStockTimer = setInterval(() => processStickerStockJobs(sock).catch(error => logger.error({ error }, 'failed processing sticker stock')), 5_000);
         processStickerStockJobs(sock).catch(error => logger.error({ error }, 'failed processing sticker stock'));
       }
-      if (!campaignTimer) {
+      if (automationEnabled && !campaignTimer) {
         campaignTimer = setInterval(() => processDueCampaigns().catch(error => logger.error({ error }, 'failed processing campaigns')), 60_000);
         processDueCampaigns().catch(error => logger.error({ error }, 'failed processing campaigns'));
       }
-      if (!creatorMentionTimer) {
+      if (automationEnabled && !creatorMentionTimer) {
         creatorMentionTimer = setInterval(() => processDueCreatorMentions().catch(error => logger.error({ error }, 'failed processing creator mentions')), 60_000);
         processDueCreatorMentions().catch(error => logger.error({ error }, 'failed processing creator mentions'));
       }
     }
 
     if (connection === 'connecting') {
+      updateRuntimeStatus({ status: 'connecting', lastError: null });
       await requestPairingCodeWhenReady();
     }
 
     if (connection === 'close') {
       const statusCode = disconnectStatusCode(lastDisconnect);
       const loggedOut = statusCode === DisconnectReason.loggedOut;
-      await upsertSession({
-        sessionName: config.sessionName,
+      const lastError = lastDisconnect?.error?.message || `status ${statusCode || 'unknown'}`;
+      updateRuntimeStatus({
         status: loggedOut ? 'logged_out' : 'disconnected',
-        lastError: lastDisconnect?.error?.message || `status ${statusCode || 'unknown'}`
+        qrAvailable: false,
+        lastError
       });
+      try {
+        await upsertSession({
+          sessionName: config.sessionName,
+          status: loggedOut ? 'logged_out' : 'disconnected',
+          lastError
+        });
+      } catch (error) {
+        logger.warn({ error }, 'database unavailable while recording WhatsApp disconnect');
+      }
       logger.warn({ statusCode, loggedOut }, 'whatsapp connection closed');
 
       if (!stopped && !loggedOut) {
@@ -184,21 +226,28 @@ export async function startWhatsApp() {
 
   await requestPairingCodeWhenReady();
 
-  sock.ev.on('messages.upsert', event => {
-    handleMessagesUpsert({ sock, event }).catch(error => {
-      logger.error({ error }, 'failed to process messages.upsert');
+  if (config.canalbot.enabled && !config.dryRun) {
+    sock.ev.on('messages.upsert', event => {
+      handleMessagesUpsert({ sock, event }).catch(error => {
+        logger.error({ error }, 'failed to process messages.upsert');
+      });
     });
-  });
+  } else {
+    logger.info({ dryRun: config.dryRun, canalbotEnabled: config.canalbot.enabled }, 'incoming commands disabled for safe local pairing');
+  }
 
   return {
     sock,
     async stop() {
       stopped = true;
       if (queueTimer) clearInterval(queueTimer);
+      if (stickerTestTimer) clearInterval(stickerTestTimer);
       if (stickerStockTimer) clearInterval(stickerStockTimer);
       if (campaignTimer) clearInterval(campaignTimer);
       if (creatorMentionTimer) clearInterval(creatorMentionTimer);
       await reconnectController?.stop?.();
+      setRuntimeSocket(null);
+      updateRuntimeStatus({ status: 'stopped', qrAvailable: false });
       sock.end?.();
     }
   };

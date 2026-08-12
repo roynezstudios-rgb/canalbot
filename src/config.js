@@ -16,6 +16,12 @@ function int(name, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function list(name, fallback = []) {
+  const raw = process.env[name];
+  if (raw == null || String(raw).trim() === '') return fallback;
+  return String(raw).split(',').map(value => value.trim()).filter(Boolean);
+}
+
 export const config = {
   dryRun: bool('WA_DRY_RUN', true),
   enableConnect: bool('WA_ENABLE_CONNECT', false),
@@ -36,6 +42,16 @@ export const config = {
     maxMediaBytes: int('CANALBOT_MAX_MEDIA_BYTES', 64 * 1024 * 1024),
     creatorMentionsEnabled: bool('CANALBOT_CREATOR_MENTIONS_ENABLED', true),
     creatorMentionChannelUrl: process.env.CANALBOT_CREATOR_MENTION_CHANNEL_URL || 'https://whatsapp.com/channel/0029Vak94drFcow5j1OfZ31F'
+  },
+  dashboard: {
+    enabled: bool('CANALBOT_DASHBOARD_ENABLED', false),
+    host: process.env.CANALBOT_DASHBOARD_HOST || '127.0.0.1',
+    port: int('CANALBOT_DASHBOARD_PORT', 3210),
+    accessToken: process.env.CANALBOT_DASHBOARD_TOKEN || '',
+    allowedOrigins: list('CANALBOT_DASHBOARD_ORIGINS', [
+      'http://127.0.0.1:3000',
+      'http://localhost:3000'
+    ])
   },
   mysql: {
     host: process.env.MYSQL_HOST || '127.0.0.1',

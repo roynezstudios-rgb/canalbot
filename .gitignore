@@ -3,6 +3,14 @@ auth/
 data/
 logs/
 node_modules/
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vinext/
+dashboard/.wrangler/
+dashboard/.devserver.*.log
+.next/
+.vinext/
+/next-env.d.ts
 release/
 backups/
 graphify-out/

@@ -27,6 +27,7 @@ Está pensado para creadores, comunidades y equipos editoriales que quieren trab
 - [Lo que puedes hacer](#lo-que-puedes-hacer)
 - [Cómo funciona](#cómo-funciona)
 - [Inicio rápido](#inicio-rápido)
+- [Dashboard local](#dashboard-local)
 - [Tu primera cola](#tu-primera-cola)
 - [Formas de publicar](#formas-de-publicar)
 - [Referencia de comandos](#referencia-de-comandos)
@@ -75,7 +76,7 @@ Además:
 
 - Node.js 20 o superior.
 - MySQL 8 o compatible.
-- Bash, disponible en Linux, macOS o WSL.
+- Bash para los scripts opcionales de instalación y empaquetado; el entorno local funciona directamente en Windows.
 - Un número de WhatsApp que sea administrador de los canales de destino.
 - Un grupo privado que funcionará como centro de control.
 
@@ -149,6 +150,23 @@ npm start
 ```
 
 Para una instalación más guiada, consulta [Instalar CanalBot](docs/INSTALACION.md).
+
+## Dashboard local
+
+CanalBot incluye un panel local responsive para vincular WhatsApp por QR y consultar datos reales de MySQL: publicaciones realizadas, campañas, stock, cola, canales y actividad.
+
+Para la primera prueba segura:
+
+```powershell
+npm --prefix dashboard install
+npm run local
+```
+
+Abre [http://localhost:3000](http://localhost:3000). Este arranque fuerza `WA_DRY_RUN=true`, desactiva comandos y trabajos automáticos, y bloquea la función de envío. Puedes vincular el teléfono sin publicar accidentalmente.
+
+El formulario **Agregar canal** usa el flujo real de `!ac <enlace> [nombre]`, exige un nombre explícito y recuerda que el número vinculado debe ser administrador del canal.
+
+Consulta la guía completa: [Probar CanalBot con el dashboard local](docs/DASHBOARD_LOCAL.md).
 
 ## Tu primera cola
 
