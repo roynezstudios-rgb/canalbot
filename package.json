@@ -1,6 +1,6 @@
 {
   "name": "canalbot",
-  "version": "0.2.1",
+  "version": "0.3.0.0",
   "private": false,
   "license": "MIT",
   "type": "module",
@@ -14,12 +14,17 @@
     "pair:qr": "node scripts/pair-whatsapp.js qr",
     "pair:code": "node scripts/pair-whatsapp.js code",
     "pair:diagnose": "node scripts/diagnose-pairing.js",
+    "local": "node scripts/apply-baileys-newsletter-media-patch.js && node scripts/dev-local.js",
+    "local:stop": "node scripts/stop-local.js",
+    "local:backend": "node scripts/start-local.js",
+    "local:dashboard": "npm --prefix dashboard run dev",
     "status": "node src/cli.js status",
-    "prestart": "bash scripts/apply-baileys-newsletter-media-patch.sh",
+    "prestart": "node scripts/apply-baileys-newsletter-media-patch.js",
     "start": "node src/index.js",
-    "pretest": "bash scripts/apply-baileys-newsletter-media-patch.sh",
+    "pretest": "node scripts/apply-baileys-newsletter-media-patch.js",
     "test": "node --test test/*.test.js",
-    "test:db": "node --test test-db/*.test.js"
+    "test:db": "node --test test-db/*.test.js",
+    "test:dashboard": "npm --prefix dashboard test"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc13",

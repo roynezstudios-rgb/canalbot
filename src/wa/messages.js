@@ -182,7 +182,7 @@ function newsletterNameFromMetadata(metadata) {
   return typeof candidate === 'string' ? candidate.trim() : '';
 }
 
-async function resolveNewsletterChannel(sock, args) {
+export async function resolveNewsletterChannel(sock, args) {
   const { first, rest } = splitFirstArg(args);
   const reference = parseNewsletterReference(first);
   if (!reference) return null;

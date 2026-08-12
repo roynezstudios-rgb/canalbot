@@ -8,6 +8,11 @@ function sleep(ms) {
 }
 
 export async function sendOutboundMessage(sock, chatJid, content, options = {}) {
+  if (config.dryRun) {
+    logger.info({ chatJid, priority: options.priority || 'normal' }, 'dry-run: outbound WhatsApp message blocked');
+    return { key: { id: null, remoteJid: chatJid }, dryRun: true };
+  }
+
   const now = Date.now();
   const nextSendAt = nextSendAtByChat.get(chatJid) || 0;
   const waitMs = Math.max(0, nextSendAt - now);

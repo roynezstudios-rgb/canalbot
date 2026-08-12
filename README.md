@@ -6,7 +6,7 @@
 
 Captura contenido, ordénalo, prográmalo y publícalo con ritmo, sin depender de un panel externo.
 
-[![Versión](https://img.shields.io/badge/versión-0.2.1-6f42c1)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.3.0.0-6f42c1)](CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
@@ -27,6 +27,7 @@ Está pensado para creadores, comunidades y equipos editoriales que quieren trab
 - [Lo que puedes hacer](#lo-que-puedes-hacer)
 - [Cómo funciona](#cómo-funciona)
 - [Inicio rápido](#inicio-rápido)
+- [Dashboard local](#dashboard-local)
 - [Tu primera cola](#tu-primera-cola)
 - [Formas de publicar](#formas-de-publicar)
 - [Referencia de comandos](#referencia-de-comandos)
@@ -75,7 +76,7 @@ Además:
 
 - Node.js 20 o superior.
 - MySQL 8 o compatible.
-- Bash, disponible en Linux, macOS o WSL.
+- Bash para los scripts opcionales de instalación y empaquetado; el entorno local funciona directamente en Windows.
 - Un número de WhatsApp que sea administrador de los canales de destino.
 - Un grupo privado que funcionará como centro de control.
 
@@ -149,6 +150,45 @@ npm start
 ```
 
 Para una instalación más guiada, consulta [Instalar CanalBot](docs/INSTALACION.md).
+
+## Dashboard local
+
+CanalBot incluye un panel local responsive para vincular WhatsApp por QR y consultar datos reales de MySQL: publicaciones realizadas, campañas, stock, cola, canales y actividad.
+
+### Sesión iniciada
+
+![CanalBot con la sesión de WhatsApp iniciada y el número protegido](docs/assets/dashboard-sesion-iniciada.png)
+
+### Panel editorial con contenido
+
+![Dashboard de CanalBot con campañas, cola, canales y estadísticas de demostración](docs/assets/dashboard-con-contenido.png)
+
+El panel también está preparado para usarse desde el navegador del teléfono:
+
+<p align="center">
+  <img src="docs/assets/dashboard-movil.png" width="360" alt="Dashboard móvil de CanalBot">
+</p>
+
+Para la primera prueba segura:
+
+```powershell
+npm --prefix dashboard install
+npm run local
+```
+
+Abre [http://localhost:3000](http://localhost:3000). Este arranque fuerza `WA_DRY_RUN=true`, desactiva comandos y trabajos automáticos, y bloquea la función de envío. Puedes vincular el teléfono sin publicar accidentalmente.
+
+Para explorar el panel con campañas, cola y canales ficticios, sin alterar MySQL ni ejecutar acciones reales, abre:
+
+```text
+http://localhost:3000/?demo=1
+```
+
+La pantalla de conexión de demostración está disponible en `http://localhost:3000/?demo=1&view=connection`. El parámetro `demo=1` sólo cambia la visualización del navegador; la instalación normal continúa usando exclusivamente el estado real de CanalBot.
+
+El formulario **Agregar canal** usa el flujo real de `!ac <enlace> [nombre]`, exige un nombre explícito y recuerda que el número vinculado debe ser administrador del canal.
+
+Consulta la guía completa: [Probar CanalBot con el dashboard local](docs/DASHBOARD_LOCAL.md).
 
 ## Tu primera cola
 
@@ -400,12 +440,13 @@ Si quieres contribuir:
 - Para canales `@newsletter`, la respuesta de Baileys confirma que WhatsApp aceptó el envío, pero no sustituye la revisión visual, especialmente con imágenes, videos y stickers.
 - La publicación multimedia depende de un parche específico para `@whiskeysockets/baileys` `7.0.0-rc13`; `prestart` y `pretest` verifican y aplican ese parche.
 - Los cambios de WhatsApp o Baileys pueden romper la compatibilidad sin previo aviso.
-- El proyecto no incluye un panel web: la operación ocurre desde el grupo de control y la terminal.
+- El dashboard y su API sólo escuchan en localhost. Si quieres abrirlo desde Internet, colócalo detrás de un túnel o proxy seguro con autenticación y HTTPS; no expongas el puerto local directamente.
 
 ## Documentación
 
 - [Instalación](docs/INSTALACION.md)
 - [Operación de colas, campañas y stickers](docs/CANALBOT_OPERACION.md)
+- [Dashboard local y modo de prueba](docs/DASHBOARD_LOCAL.md)
 - [Historial de cambios](CHANGELOG.md)
 
 ## Crédito

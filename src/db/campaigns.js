@@ -36,8 +36,8 @@ export async function listCampaigns({ chatJid, channelJid }) {
   return rows;
 }
 
-export async function setCampaignStatus({ campaignId, status, error = null }) {
-  const [result] = await getPool().execute(
+export async function setCampaignStatus({ campaignId, status, error = null }, pool = getPool()) {
+  const [result] = await pool.execute(
     `UPDATE wa_campaigns SET status=:status, last_error=:error WHERE id=:campaignId`,
     { campaignId, status, error }
   );
