@@ -6,7 +6,7 @@
 
 Captura contenido, ordénalo, prográmalo y publícalo con ritmo, sin depender de un panel externo.
 
-[![Versión](https://img.shields.io/badge/versión-0.2.1-6f42c1)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.3.0.0-6f42c1)](CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
