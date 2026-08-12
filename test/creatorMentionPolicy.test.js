@@ -15,8 +15,9 @@ test('creator mention cadence starts after one day and then becomes monthly', ()
 
 test('creator mention is a short invitation with the configured channel link', () => {
   const message = creatorMentionMessage('https://whatsapp.com/channel/example');
-  assert.match(message, /Únete/i);
+  assert.match(message, /Te invito a seguir mi canal/i);
   assert.match(message, /https:\/\/whatsapp\.com\/channel\/example/);
+  assert.doesNotMatch(message, /CanalBot|creador|agradecimiento/i);
 });
 
 test('creator mention source IDs are stable and unique per scheduled appearance', () => {
