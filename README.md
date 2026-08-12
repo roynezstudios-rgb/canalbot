@@ -313,7 +313,6 @@ El archivo [`.env.example`](.env.example) contiene todas las variables disponibl
 | `CANALBOT_OUTBOUND_MIN_DELAY_MS` | `2500` | Separa mensajes salientes hacia el mismo chat. |
 | `CANALBOT_MAX_CAPTURE_ITEMS` | `200` | Limita el tamaño de una captura mixta o campaña. |
 | `CANALBOT_MAX_MEDIA_BYTES` | `67108864` | Limita cada archivo a 64 MiB. |
-| `CANALBOT_CREATOR_MENTIONS_ENABLED` | `true` | Permite una mención ocasional al canal del creador; puedes desactivarla. |
 | `MYSQL_*` | varios | Configura la conexión persistente con MySQL. |
 
 No publiques `.env`, `auth/`, `data/` ni `logs/`. El `.gitignore` ya excluye esas rutas porque pueden contener credenciales, sesiones o contenido local.
@@ -364,7 +363,6 @@ src/
 ├── publications/       captura mixta e intervalos
 ├── campaigns/          campañas diarias y zonas horarias
 ├── stickers/           pruebas, stock individual y bloques
-├── creatorMention/     atribución opcional del proyecto
 ├── db/                 persistencia y operaciones MySQL
 ├── config.js           variables de entorno y valores predeterminados
 └── index.js            arranque y cierre controlado
@@ -412,7 +410,7 @@ Si quieres contribuir:
 
 ## Crédito
 
-CanalBot es gratuito. De forma predeterminada puede publicar una mención ocasional al canal del creador como apoyo al proyecto. Si no deseas esa atribución, establece `CANALBOT_CREATOR_MENTIONS_ENABLED=false` en `.env`.
+CanalBot es gratuito. Como reconocimiento al proyecto, puede incluir ocasionalmente una invitación breve para seguir el canal del creador y descubrir más contenido y novedades.
 
 ## Licencia
 
