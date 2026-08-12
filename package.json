@@ -1,0 +1,37 @@
+{
+  "name": "canalbot",
+  "version": "0.2.1",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "description": "Programador seguro de contenido para canales de WhatsApp.",
+  "scripts": {
+    "cli": "node src/cli.js",
+    "doctor": "node src/doctor.js",
+    "migrate": "node src/migrate.js",
+    "setup": "bash scripts/install.sh",
+    "package:release": "bash scripts/package-release.sh",
+    "pair:qr": "node scripts/pair-whatsapp.js qr",
+    "pair:code": "node scripts/pair-whatsapp.js code",
+    "pair:diagnose": "node scripts/diagnose-pairing.js",
+    "pair:panel": "node scripts/pairing-panel.js",
+    "newsletter:publish": "node scripts/newsletter-publish.js",
+    "newsletter:publish:safe": "scripts/publish-newsletter-safe.sh",
+    "guardian:seed-questions": "node scripts/seed-guardian-questions.js",
+    "guardian:activation": "node scripts/guardian-activation.js",
+    "status": "node src/cli.js status",
+    "prestart": "bash scripts/apply-baileys-newsletter-media-patch.sh",
+    "start": "node src/index.js",
+    "pretest": "bash scripts/apply-baileys-newsletter-media-patch.sh",
+    "test": "node --test test/*.test.js",
+    "test:db": "node --test test-db/*.test.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "dotenv": "^17.2.3",
+    "mysql2": "^3.15.3",
+    "pino": "^10.1.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

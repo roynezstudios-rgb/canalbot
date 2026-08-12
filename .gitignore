@@ -1,0 +1,12 @@
+.env
+auth/
+data/
+logs/
+node_modules/
+release/
+backups/
+graphify-out/
+tmp/
+diagnostico-vinculacion-*.txt
+*.bak
+*.bak-*
