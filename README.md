@@ -39,6 +39,8 @@ Está pensado para creadores, comunidades y equipos editoriales que quieren trab
 
 ## Lo que puedes hacer
 
+![Flujo editorial de CanalBot: captura, ordena, programa, publica y verifica](docs/assets/canalbot-flujo-editorial.png)
+
 | Flujo | Para qué sirve |
 |---|---|
 | **Publicación rápida** | Agrega un texto, una imagen o un video directamente a la cola. |
@@ -56,8 +58,6 @@ Además:
 - Limita los comandos editoriales a administradores del grupo de control.
 - Serializa todas las publicaciones con un candado global persistente.
 - Marca los envíos interrumpidos para revisión en lugar de duplicarlos automáticamente.
-
-![Flujo editorial de CanalBot: captura, ordena, programa, publica y verifica](docs/assets/canalbot-flujo-editorial.png)
 
 ## Cómo funciona
 
