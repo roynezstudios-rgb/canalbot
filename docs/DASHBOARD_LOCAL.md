@@ -63,6 +63,26 @@ Para apagar ambos procesos:
 npm run local:stop
 ```
 
+### Vista de demostración
+
+Si todavía no tienes MySQL preparado, puedes revisar el diseño completo con datos ficticios:
+
+```text
+http://localhost:3000/?demo=1
+```
+
+La vista incluye estadísticas, tres canales, campañas y una cola con textos, imágenes y videos de ejemplo. No escribe en la base de datos y cualquier botón que normalmente ejecutaría una acción real queda bloqueado.
+
+Para ver directamente la pantalla de conexión demostrativa usa:
+
+```text
+http://localhost:3000/?demo=1&view=connection
+```
+
+La vista normal no carga estos ejemplos. Además, cuando existe una sesión vinculada, el dashboard oculta por completo el número de teléfono en las superficies visibles.
+
+La API rechaza cualquier intento de escuchar directamente fuera de localhost. Para acceso remoto usa un túnel o proxy con autenticación y HTTPS que mantenga la API enlazada a `127.0.0.1`.
+
 ## 4. Vincular el teléfono
 
 En el teléfono abre:

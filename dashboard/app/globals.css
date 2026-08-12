@@ -386,6 +386,22 @@ textarea:focus-visible {
   gap: 9px;
 }
 
+.demo-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid rgba(188, 132, 255, 0.28);
+  border-radius: 999px;
+  color: #d8b7ff;
+  background: rgba(133, 80, 214, 0.12);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
 .channel-switcher {
   position: relative;
   min-width: 194px;
@@ -1400,6 +1416,7 @@ textarea:focus-visible {
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 @media (max-width: 1240px) {
+  .demo-mode-chip { display: none; }
   :root { --sidebar: 220px; }
   .content-grid {
     grid-template-columns: minmax(260px, 0.85fr) minmax(390px, 1.35fr);
@@ -1480,6 +1497,12 @@ textarea:focus-visible {
   }
   .status-bar {
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .status-bar::-webkit-scrollbar,
+  .metrics-grid::-webkit-scrollbar,
+  .queue-filters::-webkit-scrollbar {
+    display: none;
   }
   .status-bar > div {
     min-width: max-content;
@@ -1503,7 +1526,8 @@ textarea:focus-visible {
     gap: 10px;
   }
   .right-rail {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr;
   }
   .panel-header {
     min-height: 62px;
@@ -1514,6 +1538,7 @@ textarea:focus-visible {
   .queue-filters {
     margin-top: 10px;
     overflow-x: auto;
+    scrollbar-width: none;
   }
   .queue-filters button {
     flex: 1;
@@ -1575,6 +1600,11 @@ textarea:focus-visible {
     bottom: 81px;
     left: 12px;
     justify-content: center;
+  }
+  .composer-modal input,
+  .composer-modal select,
+  .composer-modal textarea {
+    font-size: 16px;
   }
 }
 

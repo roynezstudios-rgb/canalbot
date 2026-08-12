@@ -155,6 +155,20 @@ Para una instalación más guiada, consulta [Instalar CanalBot](docs/INSTALACION
 
 CanalBot incluye un panel local responsive para vincular WhatsApp por QR y consultar datos reales de MySQL: publicaciones realizadas, campañas, stock, cola, canales y actividad.
 
+### Sesión iniciada
+
+![CanalBot con la sesión de WhatsApp iniciada y el número protegido](docs/assets/dashboard-sesion-iniciada.png)
+
+### Panel editorial con contenido
+
+![Dashboard de CanalBot con campañas, cola, canales y estadísticas de demostración](docs/assets/dashboard-con-contenido.png)
+
+El panel también está preparado para usarse desde el navegador del teléfono:
+
+<p align="center">
+  <img src="docs/assets/dashboard-movil.png" width="360" alt="Dashboard móvil de CanalBot">
+</p>
+
 Para la primera prueba segura:
 
 ```powershell
@@ -163,6 +177,14 @@ npm run local
 ```
 
 Abre [http://localhost:3000](http://localhost:3000). Este arranque fuerza `WA_DRY_RUN=true`, desactiva comandos y trabajos automáticos, y bloquea la función de envío. Puedes vincular el teléfono sin publicar accidentalmente.
+
+Para explorar el panel con campañas, cola y canales ficticios, sin alterar MySQL ni ejecutar acciones reales, abre:
+
+```text
+http://localhost:3000/?demo=1
+```
+
+La pantalla de conexión de demostración está disponible en `http://localhost:3000/?demo=1&view=connection`. El parámetro `demo=1` sólo cambia la visualización del navegador; la instalación normal continúa usando exclusivamente el estado real de CanalBot.
 
 El formulario **Agregar canal** usa el flujo real de `!ac <enlace> [nombre]`, exige un nombre explícito y recuerda que el número vinculado debe ser administrador del canal.
 
@@ -418,12 +440,13 @@ Si quieres contribuir:
 - Para canales `@newsletter`, la respuesta de Baileys confirma que WhatsApp aceptó el envío, pero no sustituye la revisión visual, especialmente con imágenes, videos y stickers.
 - La publicación multimedia depende de un parche específico para `@whiskeysockets/baileys` `7.0.0-rc13`; `prestart` y `pretest` verifican y aplican ese parche.
 - Los cambios de WhatsApp o Baileys pueden romper la compatibilidad sin previo aviso.
-- El proyecto no incluye un panel web: la operación ocurre desde el grupo de control y la terminal.
+- El dashboard y su API sólo escuchan en localhost. Si quieres abrirlo desde Internet, colócalo detrás de un túnel o proxy seguro con autenticación y HTTPS; no expongas el puerto local directamente.
 
 ## Documentación
 
 - [Instalación](docs/INSTALACION.md)
 - [Operación de colas, campañas y stickers](docs/CANALBOT_OPERACION.md)
+- [Dashboard local y modo de prueba](docs/DASHBOARD_LOCAL.md)
 - [Historial de cambios](CHANGELOG.md)
 
 ## Crédito

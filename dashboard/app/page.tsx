@@ -177,7 +177,63 @@ function actionLabel(action: DashboardData["actions"][number]) {
   return labels[action.action_key] || action.action_key.replaceAll("_", " ");
 }
 
+function maskedPhone(phoneJid: string | null | undefined) {
+  return phoneJid ? "Número vinculado ••••" : "Sesión local";
+}
+
+const demoStatus: StatusResponse = {
+  ok: true,
+  runtime: {
+    status: "connected",
+    qrAvailable: false,
+    qrUpdatedAt: null,
+    phoneJid: "demo@s.whatsapp.net",
+    lastError: null,
+    updatedAt: "2026-08-12T15:30:00.000Z",
+  },
+  database: { connected: true, error: null },
+  safety: { dryRun: true, commandsEnabled: false, publishingEnabled: false },
+};
+
+const demoDashboard: DashboardData = {
+  ok: true,
+  session: { phone_jid: demoStatus.runtime.phoneJid, status: "connected", last_seen_at: "2026-08-12T15:30:00.000Z" },
+  controlChat: { chat_jid: "120363400000000099@g.us", name: "Mesa editorial", active_channel_jid: "120363400000000001@newsletter" },
+  summary: {
+    published: 128,
+    queued: 9,
+    failed: 1,
+    nextScheduledAt: "2026-08-12T17:00:00.000Z",
+    activeCampaigns: 2,
+    campaignStock: 34,
+  },
+  channels: [
+    { channel_jid: "120363400000000001@newsletter", name: "Ideas que sí sirven", enabled: true, publish_mode: "dry_run", admin_confirmed_at: "2026-08-10T18:00:00.000Z", queued_count: 5, published_count: 82, failed_count: 0 },
+    { channel_jid: "120363400000000002@newsletter", name: "Estudio creativo", enabled: true, publish_mode: "dry_run", admin_confirmed_at: "2026-08-09T18:00:00.000Z", queued_count: 3, published_count: 34, failed_count: 1 },
+    { channel_jid: "120363400000000003@newsletter", name: "Comunidad CanalBot", enabled: true, publish_mode: "off", admin_confirmed_at: "2026-08-08T18:00:00.000Z", queued_count: 1, published_count: 12, failed_count: 0 },
+  ],
+  campaigns: [
+    { id: 101, channel_jid: "120363400000000001@newsletter", name: "Tip diario", schedule_time: "09:00", timezone: "America/Mexico_City", status: "running", pending_count: 15, queued_count: 1, published_count: 24, failed_count: 0, text_count: 24, image_count: 10, video_count: 5, total_count: 39, last_error: null },
+    { id: 102, channel_jid: "120363400000000001@newsletter", name: "Mini tutoriales", schedule_time: "18:30", timezone: "America/Mexico_City", status: "waiting", pending_count: 19, queued_count: 2, published_count: 11, failed_count: 0, text_count: 8, image_count: 14, video_count: 8, total_count: 30, last_error: null },
+    { id: 103, channel_jid: "120363400000000002@newsletter", name: "Detrás del estudio", schedule_time: "13:00", timezone: "America/Mexico_City", status: "paused", pending_count: 8, queued_count: 0, published_count: 17, failed_count: 1, text_count: 7, image_count: 12, video_count: 6, total_count: 25, last_error: "Una pieza requiere revisión antes de reanudar." },
+  ],
+  queue: [
+    { id: 201, channel_jid: "120363400000000001@newsletter", channel_name: "Ideas que sí sirven", content_type: "image", text_content: "Tres formas de organizar una semana de contenido", media_path: "demo/semana-editorial.png", status: "queued", scheduled_at: "2026-08-12T17:00:00.000Z", published_at: null, error_text: null },
+    { id: 202, channel_jid: "120363400000000001@newsletter", channel_name: "Ideas que sí sirven", content_type: "video", text_content: "Así se prepara una campaña desde el teléfono", media_path: "demo/campana-movil.mp4", status: "queued", scheduled_at: "2026-08-12T19:00:00.000Z", published_at: null, error_text: null },
+    { id: 203, channel_jid: "120363400000000001@newsletter", channel_name: "Ideas que sí sirven", content_type: "text", text_content: "Una buena cola editorial te deja crear hoy y publicar con calma mañana.", media_path: null, status: "queued", scheduled_at: "2026-08-12T21:00:00.000Z", published_at: null, error_text: null },
+    { id: 204, channel_jid: "120363400000000001@newsletter", channel_name: "Ideas que sí sirven", content_type: "image", text_content: "Checklist antes de publicar", media_path: "demo/checklist.png", status: "queued", scheduled_at: "2026-08-13T15:00:00.000Z", published_at: null, error_text: null },
+    { id: 205, channel_jid: "120363400000000002@newsletter", channel_name: "Estudio creativo", content_type: "video", text_content: "Recorrido del nuevo espacio de trabajo", media_path: "demo/recorrido.mp4", status: "queued", scheduled_at: "2026-08-12T18:30:00.000Z", published_at: null, error_text: null },
+  ],
+  actions: [
+    { action_key: "publication_queued_from_dashboard", mode: "executed", reason: null, details_json: { content_type: "image" }, created_at: "2026-08-12T15:24:00.000Z" },
+    { action_key: "channel_queue_published", mode: "executed", reason: null, details_json: { content_type: "text" }, created_at: "2026-08-12T15:05:00.000Z" },
+    { action_key: "channel_added_from_dashboard", mode: "executed", reason: null, details_json: { channel: "Comunidad CanalBot" }, created_at: "2026-08-12T14:40:00.000Z" },
+    { action_key: "qr_generated", mode: "preview", reason: "Modo demostración", details_json: null, created_at: "2026-08-12T14:15:00.000Z" },
+  ],
+};
+
 export default function Home() {
+  const [demoMode, setDemoMode] = useState<boolean | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [setupVisible, setSetupVisible] = useState(true);
@@ -192,15 +248,24 @@ export default function Home() {
   const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null);
 
   const loadStatus = useCallback(async () => {
+    if (demoMode) {
+      setStatus(demoStatus);
+      return;
+    }
     try {
       setStatus(await api<StatusResponse>("/api/v1/status"));
     } catch (error) {
       setStatus(null);
       setToast({ message: error instanceof Error ? error.message : "CanalBot local no responde.", error: true });
     }
-  }, []);
+  }, [demoMode]);
 
   const loadDashboard = useCallback(async () => {
+    if (demoMode) {
+      setData(demoDashboard);
+      setActiveChannel(current => current || demoDashboard.channels[0]?.channel_jid || "");
+      return;
+    }
     try {
       const snapshot = await api<DashboardData>("/api/v1/dashboard");
       setData(snapshot);
@@ -208,16 +273,32 @@ export default function Home() {
     } catch {
       setData(null);
     }
+  }, [demoMode]);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const enabled = params.get("demo") === "1";
+      setDemoMode(enabled);
+      if (enabled) {
+        setStatus(demoStatus);
+        setData(demoDashboard);
+        setActiveChannel(demoDashboard.channels[0]?.channel_jid || "");
+        setSetupVisible(params.get("view") === "connection");
+      }
+    }, 0);
+    return () => window.clearTimeout(initial);
   }, []);
 
   useEffect(() => {
+    if (demoMode === null) return;
     const initial = window.setTimeout(() => void loadStatus(), 0);
     const timer = window.setInterval(() => void loadStatus(), 2500);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(timer);
     };
-  }, [loadStatus]);
+  }, [demoMode, loadStatus]);
 
   useEffect(() => {
     if (status?.database.connected) {
@@ -255,6 +336,10 @@ export default function Home() {
   }
 
   async function execute(action: () => Promise<void>) {
+    if (demoMode) {
+      flash("Vista de demostración: las acciones reales están desactivadas.");
+      return;
+    }
     setBusy(true);
     try {
       await action();
@@ -270,6 +355,7 @@ export default function Home() {
     return (
       <SetupScreen
         status={status}
+        demoMode={Boolean(demoMode)}
         onRefresh={() => void loadStatus()}
         onContinue={() => {
           setSetupVisible(false);
@@ -326,7 +412,7 @@ export default function Home() {
 
         <div className="account-card">
           <div className="avatar"><Smartphone size={18} /></div>
-          <div><strong>{status?.runtime.phoneJid?.split(":")[0] || "Sin número"}</strong><span>Sesión local</span></div>
+          <div><strong>{maskedPhone(status?.runtime.phoneJid)}</strong><span>Sesión local</span></div>
           <ShieldCheck size={19} />
         </div>
       </aside>
@@ -340,6 +426,7 @@ export default function Home() {
             <div><p>{formatDate(new Date().toISOString(), { weekday: "long", day: "numeric", month: "long" })}</p><h1>Tu centro editorial <Sparkles size={20} /></h1></div>
           </div>
           <div className="topbar-actions">
+            {demoMode && <span className="demo-mode-chip"><Sparkles size={15} /> DEMOSTRACIÓN</span>}
             <label className="channel-switcher">
               <span className="channel-icon"><Radio size={17} /></span>
               <span><small>CANAL ACTIVO</small><strong>{selectedChannel?.name || "Agrega un canal"}</strong></span>
@@ -452,12 +539,12 @@ export default function Home() {
   );
 }
 
-function SetupScreen({ status, onRefresh, onContinue }: { status: StatusResponse | null; onRefresh: () => void; onContinue: () => void }) {
+function SetupScreen({ status, demoMode, onRefresh, onContinue }: { status: StatusResponse | null; demoMode: boolean; onRefresh: () => void; onContinue: () => void }) {
   const connected = status?.runtime.status === "connected";
   const qrPending = status?.runtime.status === "qr_pending" && status.runtime.qrAvailable;
   return (
     <main className="setup-shell">
-      <header className="setup-header"><div className="brand setup-brand"><span className="brand-mark"><Image src="/canalbot-mascota.png" alt="Mascota de CanalBot" width={52} height={52} priority /></span><span><span className="brand-name">Canal<span>Bot</span></span><small>Activación local</small></span></div><span className="safe-mode-chip"><LockKeyhole size={15} /> Modo seguro: envíos bloqueados</span></header>
+      <header className="setup-header"><div className="brand setup-brand"><span className="brand-mark"><Image src="/canalbot-mascota.png" alt="Mascota de CanalBot" width={52} height={52} priority /></span><span><span className="brand-name">Canal<span>Bot</span></span><small>Activación local</small></span></div><span className="safe-mode-chip"><LockKeyhole size={15} /> {demoMode ? "Demostración segura" : "Modo seguro: envíos bloqueados"}</span></header>
       <section className="setup-grid">
         <div className="setup-copy"><span className="section-kicker">PRIMERA CONEXIÓN</span><h1>Conecta tu WhatsApp.<br /><span>CanalBot hará el resto.</span></h1><p>Vincula el número que administrará tus canales. Durante esta prueba CanalBot puede conectarse y leer la estructura, pero no enviará mensajes ni publicaciones.</p>
           <ol className="setup-steps">
@@ -469,7 +556,7 @@ function SetupScreen({ status, onRefresh, onContinue }: { status: StatusResponse
         </div>
         <section className={`qr-card ${connected ? "connected" : ""}`}>
           <div className="qr-card-top"><span><span className={`live-dot ${connected ? "" : "offline"}`} /> {connected ? "SESIÓN CONECTADA" : qrPending ? "QR LISTO" : "CONECTANDO"}</span><button onClick={onRefresh} aria-label="Actualizar estado"><RefreshCw size={17} /></button></div>
-          {connected ? <div className="connected-visual"><div className="connected-robot"><Image src="/canalbot-mascota.png" alt="CanalBot conectado" width={180} height={180} /></div><CheckCircle2 size={44} /><h2>¡CanalBot está en línea!</h2><p>{status?.runtime.phoneJid?.split(":")[0] || "Sesión vinculada"}</p></div> : qrPending ? <div className="qr-image-frame"><Image unoptimized src={`${apiOrigin()}/api/v1/qr?updated=${encodeURIComponent(status?.runtime.qrUpdatedAt || "now")}`} alt="Código QR para vincular WhatsApp" width={320} height={320} /><span className="qr-corner top-left" /><span className="qr-corner top-right" /><span className="qr-corner bottom-left" /><span className="qr-corner bottom-right" /></div> : <div className="qr-loading"><div className="pulse-rings"><QrCode size={70} /></div><h2>Preparando la conexión</h2><p>El código aparecerá en cuanto WhatsApp responda.</p></div>}
+          {connected ? <div className="connected-visual"><div className="connected-robot"><Image src="/canalbot-mascota.png" alt="CanalBot conectado" width={180} height={180} /></div><CheckCircle2 size={44} /><h2>¡CanalBot está en línea!</h2><p>{maskedPhone(status?.runtime.phoneJid)}</p></div> : qrPending ? <div className="qr-image-frame"><Image unoptimized src={`${apiOrigin()}/api/v1/qr?updated=${encodeURIComponent(status?.runtime.qrUpdatedAt || "now")}`} alt="Código QR para vincular WhatsApp" width={320} height={320} /><span className="qr-corner top-left" /><span className="qr-corner top-right" /><span className="qr-corner bottom-left" /><span className="qr-corner bottom-right" /></div> : <div className="qr-loading"><div className="pulse-rings"><QrCode size={70} /></div><h2>Preparando la conexión</h2><p>El código aparecerá en cuanto WhatsApp responda.</p></div>}
           <div className="qr-card-footer">{connected ? <button className="primary-button setup-continue" onClick={onContinue}>Entrar al centro editorial <ChevronRight size={17} /></button> : <><Smartphone size={18} /><span>El QR se renueva automáticamente. No compartas esta pantalla.</span></>}</div>
         </section>
       </section>
