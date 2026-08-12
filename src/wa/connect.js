@@ -13,11 +13,7 @@ import { config } from '../config.js';
 import { logAction, upsertSession } from '../db.js';
 import { logger } from '../logger.js';
 import { processDueChannelQueue } from '../queue/channelQueue.js';
-import { attachEventRouter } from '../core/eventRouter.js';
-import { startControlCommandProcessor } from '../core/controlCommands.js';
-import { processGuardianSchedules } from '../guardianbot/admin/schedules.js';
-import { processGuardianMagazines } from '../guardianbot/magazines/generator.js';
-import { processGuardianDailyQuestions } from '../guardianbot/community/dailyQuestions.js';
+import { handleMessagesUpsert } from './messages.js';
 import { processDueStickerTestJobs } from '../stickers/testJobs.js';
 import { processStickerStockJobs } from '../stickers/stockJobs.js';
 import { recoverInterruptedPublishes } from '../db/publishSafety.js';
@@ -49,10 +45,6 @@ export async function startWhatsApp() {
   let stopped = false;
   let reconnectController = null;
   let queueTimer = null;
-  let guardianScheduleTimer = null;
-  let guardianMagazineTimer = null;
-  let guardianDailyQuestionTimer = null;
-  let controlCommandProcessor = null;
   let stickerTestTimer = null;
   let stickerStockTimer = null;
   let campaignTimer = null;
@@ -127,9 +119,6 @@ export async function startWhatsApp() {
       if (recovered.channelQueue || recovered.stickerStock || recovered.stickerTests) {
         logger.warn({ recovered }, 'interrupted publication jobs moved to review-required state');
       }
-      if (!controlCommandProcessor) {
-        controlCommandProcessor = startControlCommandProcessor(sock);
-      }
       if (config.canalbot.enabled && config.canalbot.publishEnabled && !queueTimer) {
         queueTimer = setInterval(() => {
           processDueChannelQueue(sock).catch(error => {
@@ -161,36 +150,6 @@ export async function startWhatsApp() {
       if (!creatorMentionTimer) {
         creatorMentionTimer = setInterval(() => processDueCreatorMentions().catch(error => logger.error({ error }, 'failed processing creator mentions')), 60_000);
         processDueCreatorMentions().catch(error => logger.error({ error }, 'failed processing creator mentions'));
-      }
-      if (!guardianScheduleTimer) {
-        guardianScheduleTimer = setInterval(() => {
-          processGuardianSchedules(sock).catch(error => {
-            logger.error({ error }, 'failed processing GuardianBot schedules');
-          });
-        }, Math.max(10, config.guardian.scheduleCheckSeconds) * 1000);
-        processGuardianSchedules(sock).catch(error => {
-          logger.error({ error }, 'failed processing GuardianBot schedules');
-        });
-      }
-      if (!guardianMagazineTimer) {
-        guardianMagazineTimer = setInterval(() => {
-          processGuardianMagazines(sock).catch(error => {
-            logger.error({ error }, 'failed processing GuardianBot magazines');
-          });
-        }, Math.max(60, config.guardian.magazineCheckSeconds) * 1000);
-        processGuardianMagazines(sock).catch(error => {
-          logger.error({ error }, 'failed processing GuardianBot magazines');
-        });
-      }
-      if (!guardianDailyQuestionTimer) {
-        guardianDailyQuestionTimer = setInterval(() => {
-          processGuardianDailyQuestions(sock).catch(error => {
-            logger.error({ error }, 'failed processing GuardianBot daily questions');
-          });
-        }, Math.max(60, config.guardian.dailyQuestionCheckSeconds) * 1000);
-        processGuardianDailyQuestions(sock).catch(error => {
-          logger.error({ error }, 'failed processing GuardianBot daily questions');
-        });
       }
     }
 
@@ -225,7 +184,11 @@ export async function startWhatsApp() {
 
   await requestPairingCodeWhenReady();
 
-  attachEventRouter(sock);
+  sock.ev.on('messages.upsert', event => {
+    handleMessagesUpsert({ sock, event }).catch(error => {
+      logger.error({ error }, 'failed to process messages.upsert');
+    });
+  });
 
   return {
     sock,
@@ -235,10 +198,6 @@ export async function startWhatsApp() {
       if (stickerStockTimer) clearInterval(stickerStockTimer);
       if (campaignTimer) clearInterval(campaignTimer);
       if (creatorMentionTimer) clearInterval(creatorMentionTimer);
-      if (guardianScheduleTimer) clearInterval(guardianScheduleTimer);
-      if (guardianMagazineTimer) clearInterval(guardianMagazineTimer);
-      if (guardianDailyQuestionTimer) clearInterval(guardianDailyQuestionTimer);
-      controlCommandProcessor?.stop?.();
       await reconnectController?.stop?.();
       sock.end?.();
     }

@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 test('numeric config falls back when env value is blank', async () => {
-  const previous = process.env.GUARDIAN_OUTBOUND_MIN_DELAY_MS;
-  process.env.GUARDIAN_OUTBOUND_MIN_DELAY_MS = '';
+  const previous = process.env.CANALBOT_OUTBOUND_MIN_DELAY_MS;
+  process.env.CANALBOT_OUTBOUND_MIN_DELAY_MS = '';
 
   try {
     const { config } = await import(`../src/config.js?blank-number-${Date.now()}`);
-    assert.equal(config.guardian.outboundMinDelayMs, 2500);
+    assert.equal(config.canalbot.outboundMinDelayMs, 2500);
   } finally {
     if (previous == null) {
-      delete process.env.GUARDIAN_OUTBOUND_MIN_DELAY_MS;
+      delete process.env.CANALBOT_OUTBOUND_MIN_DELAY_MS;
     } else {
-      process.env.GUARDIAN_OUTBOUND_MIN_DELAY_MS = previous;
+      process.env.CANALBOT_OUTBOUND_MIN_DELAY_MS = previous;
     }
   }
 });
