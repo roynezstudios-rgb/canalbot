@@ -368,14 +368,18 @@ async function handlePublication(req, res) {
     if (media?.path) await fs.rm(media.path, { force: true }).catch(() => {});
     throw error;
   }
-  await logAction({
-    actionKey: 'publication_queued_from_dashboard',
-    mode: 'executed',
-    groupJid: control?.chat_jid || null,
-    messageId: sourceMessageId,
-    reason: 'local_dashboard',
-    details: { queueId, channelJid, contentType, scheduledAt: scheduledAt.toISOString() }
-  });
+  try {
+    await logAction({
+      actionKey: 'publication_queued_from_dashboard',
+      mode: 'executed',
+      groupJid: control?.chat_jid || null,
+      messageId: sourceMessageId,
+      reason: 'local_dashboard',
+      details: { queueId, channelJid, contentType, scheduledAt: scheduledAt.toISOString() }
+    });
+  } catch (error) {
+    logger.warn({ error, queueId, channelJid }, 'dashboard publication queued but audit log failed');
+  }
   sendJson(req, res, 201, { ok: true, queueId, contentType, scheduledAt: scheduledAt.toISOString() });
 }
 
