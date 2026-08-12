@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { config } from '../src/config.js';
 import {
+  logDashboardActionBestEffort,
   requireControlChat,
   requireRegisteredChannel,
   validateCampaignSchedule,
@@ -101,4 +102,18 @@ test('registered channel validation returns only the exact requested channel', (
     () => requireRegisteredChannel('another@newsletter', channel),
     error => error.statusCode === 400 && /canal registrado/i.test(error.message)
   );
+});
+
+test('a failed audit log stays best-effort after a publication is committed', async () => {
+  const warnings = [];
+  const result = await logDashboardActionBestEffort(
+    { actionKey: 'publication_queued_from_dashboard' },
+    {
+      async log() { throw new Error('audit unavailable'); },
+      warn(details) { warnings.push(details); }
+    }
+  );
+  assert.equal(result, false);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].error.message, /audit unavailable/);
 });

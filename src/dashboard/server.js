@@ -189,6 +189,16 @@ export function validateCampaignSchedule(name, scheduleTime, timezone = 'America
   return { name, scheduleTime, timezone };
 }
 
+export async function logDashboardActionBestEffort(input, { log = logAction, warn = details => logger.warn(details, 'dashboard audit log failed') } = {}) {
+  try {
+    await log(input);
+    return true;
+  } catch (error) {
+    warn({ error, actionKey: input.actionKey });
+    return false;
+  }
+}
+
 async function saveUploadedMedia(file) {
   file = validateUploadedMedia(file);
   if (!file) return null;
@@ -368,18 +378,16 @@ async function handlePublication(req, res) {
     if (media?.path) await fs.rm(media.path, { force: true }).catch(() => {});
     throw error;
   }
-  try {
-    await logAction({
-      actionKey: 'publication_queued_from_dashboard',
-      mode: 'executed',
-      groupJid: control?.chat_jid || null,
-      messageId: sourceMessageId,
-      reason: 'local_dashboard',
-      details: { queueId, channelJid, contentType, scheduledAt: scheduledAt.toISOString() }
-    });
-  } catch (error) {
-    logger.warn({ error, queueId, channelJid }, 'dashboard publication queued but audit log failed');
-  }
+  await logDashboardActionBestEffort({
+    actionKey: 'publication_queued_from_dashboard',
+    mode: 'executed',
+    groupJid: control?.chat_jid || null,
+    messageId: sourceMessageId,
+    reason: 'local_dashboard',
+    details: { queueId, channelJid, contentType, scheduledAt: scheduledAt.toISOString() }
+  }, {
+    warn: details => logger.warn({ ...details, queueId, channelJid }, 'dashboard publication queued but audit log failed')
+  });
   sendJson(req, res, 201, { ok: true, queueId, contentType, scheduledAt: scheduledAt.toISOString() });
 }
 
